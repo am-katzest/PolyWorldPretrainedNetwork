@@ -33,12 +33,12 @@ def bounding_box_from_points(points):
 
 
 def single_annotation(poly):
-    _result = {}
-    _result["category_id"] = 100
-    _result["score"] = 1
-    _result["segmentation"] = poly
-    _result["bbox"] = bounding_box_from_points(_result["segmentation"])
-    return _result
+    return {
+        "category_id": 100,
+        "score": 1,
+        "segmentation": poly,
+        "bbox": bounding_box_from_points(poly),
+    }
 
 
 def load():
