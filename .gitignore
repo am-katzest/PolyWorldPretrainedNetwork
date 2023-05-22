@@ -1,0 +1,5 @@
+venv
+/trained_weights/polyworld_backbone
+*.png
+/__pycache__/
+*.pyc
