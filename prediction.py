@@ -21,23 +21,30 @@ def loadSample(name):
     return torch.unsqueeze(image, 0).float()
 
 
-def bounding_box_from_points(points):
+def split(points):
     points = np.array(points).flatten()
     even_locations = np.arange(points.shape[0] / 2) * 2
     odd_locations = even_locations + 1
-    X = np.take(points, even_locations.tolist())
-    Y = np.take(points, odd_locations.tolist())
-    bbox = [X.min(), Y.min(), X.max() - X.min(), Y.max() - Y.min()]
+
+    def pre(pts):
+        return np.take(points, pts.tolist()).tolist()
+
+    return (pre(even_locations), pre(odd_locations))
+
+
+def bounding_box_from_points(X, Y):
+    bbox = [min(X), min(Y), max(X) - min(X), max(Y) - min(Y)]
     bbox = [int(b) for b in bbox]
     return bbox
 
 
 def single_annotation(poly):
+    X, Y = split(poly)
     return {
-        "category_id": 100,
-        "score": 1,
         "segmentation": poly,
-        "bbox": bounding_box_from_points(poly),
+        "X": X,
+        "Y": Y,
+        "bbox": bounding_box_from_points(X, Y),
     }
 
 
