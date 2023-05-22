@@ -7,7 +7,7 @@ from pycocotools.coco import COCO
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from dataloader_crowdai import CrowdAI
+from dataloader_crowdai import loadSample
 from models.backbone import DetectionBranch, NonMaxSuppression, R2U_Net
 from models.matching import OptimalMatching
 
@@ -23,9 +23,8 @@ def bounding_box_from_points(points):
     return bbox
 
 
-def single_annotation(image_id, poly):
+def single_annotation(poly):
     _result = {}
-    _result["image_id"] = int(image_id)
     _result["category_id"] = 100
     _result["score"] = 1
     _result["segmentation"] = poly
@@ -33,7 +32,7 @@ def single_annotation(image_id, poly):
     return _result
 
 
-def prediction(batch_size, images_directory):
+def prediction(filename):
     # Load network modules
     model = R2U_Net()
     model = model.train()
@@ -68,52 +67,27 @@ def prediction(batch_size, images_directory):
     )
 
     # Initiate the dataloader
-    CrowdAI_dataset = CrowdAI(
-        images_directory=images_directory,
-    )
-    dataloader = DataLoader(
-        CrowdAI_dataset, batch_size=batch_size, shuffle=False, num_workers=batch_size
-    )
 
-    train_iterator = tqdm(dataloader)
+    rgb = loadSample(filename)
+    features = model(rgb)
+    occupancy_grid = head_ver(features)
 
-    speed = []
+    _, graph_pressed = suppression(occupancy_grid)
     predictions = []
-    for i_batch, sample_batched in enumerate(train_iterator):
-        rgb = sample_batched["image"].float()
-        idx = sample_batched["image_idx"]
+    poly = matching.predict(rgb, features, graph_pressed)
 
-        t0 = time.time()
-
-        features = model(rgb)
-        occupancy_grid = head_ver(features)
-
-        _, graph_pressed = suppression(occupancy_grid)
-
-        poly = matching.predict(rgb, features, graph_pressed)
-
-        speed.append(time.time() - t0)
-
-        for i, pp in enumerate(poly):
-            for p in pp:
-                predictions.append(single_annotation(idx[i], [p]))
+    for i, pp in enumerate(poly):
+        for p in pp:
+            predictions.append(single_annotation([p]))
 
         del features
         del occupancy_grid
         del graph_pressed
         del poly
         del rgb
-        del idx
 
-    print("Average model speed: ", np.mean(speed) / batch_size, " [s / image]")
-
-    fp = open("predictions.json", "w")
-    fp.write(json.dumps(predictions))
-    fp.close()
+    return predictions
 
 
 if __name__ == "__main__":
-    prediction(
-        batch_size=6,
-        images_directory="/home/stefano/Workspace/data/mapping_challenge_dataset/raw/val/images/",
-    )
+    print(prediction("0.png"))
