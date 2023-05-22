@@ -1,15 +1,24 @@
-import json
-import time
-
 import numpy as np
 import torch
-from pycocotools.coco import COCO
-from torch.utils.data import DataLoader
-from tqdm import tqdm
+from skimage import io
+from skimage.transform import resize
 
-from dataloader_crowdai import loadSample
 from models.backbone import DetectionBranch, NonMaxSuppression, R2U_Net
 from models.matching import OptimalMatching
+
+
+def loadSample(name):
+    window_size = 320
+    image = io.imread(name)
+    image = resize(
+        image,
+        (window_size, window_size, 3),
+        anti_aliasing=True,
+        preserve_range=True,
+    )
+    image = torch.from_numpy(image)
+    image = image.permute(2, 0, 1) / 255.0
+    return torch.unsqueeze(image, 0).float()
 
 
 def bounding_box_from_points(points):
