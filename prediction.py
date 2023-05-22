@@ -32,7 +32,7 @@ def single_annotation(poly):
     return _result
 
 
-def prediction(filename):
+def load():
     # Load network modules
     model = R2U_Net()
     model = model.train()
@@ -67,27 +67,24 @@ def prediction(filename):
     )
 
     # Initiate the dataloader
+    def predict(filename):
+        rgb = loadSample(filename)
+        features = model(rgb)
+        occupancy_grid = head_ver(features)
 
-    rgb = loadSample(filename)
-    features = model(rgb)
-    occupancy_grid = head_ver(features)
+        _, graph_pressed = suppression(occupancy_grid)
+        predictions = []
+        poly = matching.predict(rgb, features, graph_pressed)
 
-    _, graph_pressed = suppression(occupancy_grid)
-    predictions = []
-    poly = matching.predict(rgb, features, graph_pressed)
+        for i, pp in enumerate(poly):
+            for p in pp:
+                predictions.append(single_annotation([p]))
 
-    for i, pp in enumerate(poly):
-        for p in pp:
-            predictions.append(single_annotation([p]))
+            return predictions
 
-        del features
-        del occupancy_grid
-        del graph_pressed
-        del poly
-        del rgb
-
-    return predictions
+    return predict
 
 
+predict = load()
 if __name__ == "__main__":
-    print(prediction("0.png"))
+    print(predict("0.png"))
