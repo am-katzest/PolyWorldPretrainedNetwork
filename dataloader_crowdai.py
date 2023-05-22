@@ -14,4 +14,4 @@ def loadSample(name):
     )
     image = torch.from_numpy(image)
     image = image.permute(2, 0, 1) / 255.0
-    return image.float()
+    return torch.unsqueeze(image, 0).float()
